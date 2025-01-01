@@ -1,0 +1,2127 @@
+service:
+  enabled: true
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+persistence:
+  type: pvc
+  enabled: true
+  # storageClassName: default
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+
+deploymentStrategy:
+  type: Recreate
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+    - name: prometheus
+      type: prometheus
+      access: proxy
+      url: http://vmsingle-vmsingle:8429
+      isDefault: true
+      updateIntervalSeconds: 10
+      editable: true
+
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      disableDeletion: true
+      editable: true
+      options:
+        path: /var/lib/grafana/dashboards/default
+
+## Configure grafana dashboard to import
+## NOTE: To use dashboards you must also enable/configure dashboardProviders
+## ref: https://grafana.com/dashboards
+##
+## dashboards per provider, use provider name as key.
+##
+dashboards: 
+  default:
+    Rclone-Metrics:
+      json: |
+        {
+          "annotations": {
+            "list": [
+              {
+                "builtIn": 1,
+                "datasource": {
+                  "type": "grafana",
+                  "uid": "-- Grafana --"
+                },
+                "enable": true,
+                "hide": true,
+                "iconColor": "rgba(0, 211, 255, 1)",
+                "name": "Annotations & Alerts",
+                "type": "dashboard"
+              }
+            ]
+          },
+          "editable": true,
+          "fiscalYearStartMonth": 0,
+          "graphTooltip": 2,
+          "id": 3,
+          "links": [],
+          "liveNow": false,
+          "panels": [
+            {
+              "collapsed": false,
+              "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+              },
+              "id": 22,
+              "panels": [],
+              "title": "Total Rclone Metrics",
+              "type": "row"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "P1809F7CD0C75ACF3"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    }
+                  },
+                  "mappings": [],
+                  "unitScale": true
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 6,
+                "w": 6,
+                "x": 0,
+                "y": 1
+              },
+              "id": 2,
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "right",
+                  "showLegend": true,
+                  "values": [
+                    "value",
+                    "percent"
+                  ]
+                },
+                "pieType": "donut",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "tooltip": {
+                  "mode": "single",
+                  "sort": "none"
+                }
+              },
+              "targets": [
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "builder",
+                  "expr": "sum(rclone_checked_files_total{customer=\"$Customer\"})",
+                  "fullMetaSearch": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "Files Checked",
+                  "range": true,
+                  "refId": "A",
+                  "useBackend": false
+                },
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "expr": "sum(rclone_files_transferred_total{customer=\"$Customer\"})",
+                  "fullMetaSearch": false,
+                  "hide": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "Files Transferred",
+                  "range": true,
+                  "refId": "B",
+                  "useBackend": false
+                },
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "expr": "sum(rclone_files_deleted_total{customer=\"$Customer\"})",
+                  "fullMetaSearch": false,
+                  "hide": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "Files Deleted",
+                  "range": true,
+                  "refId": "C",
+                  "useBackend": false
+                },
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "expr": "sum(rclone_dirs_deleted_total{customer=\"$Customer\"})",
+                  "fullMetaSearch": false,
+                  "hide": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "Directories Deleted",
+                  "range": true,
+                  "refId": "D",
+                  "useBackend": false
+                },
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "builder",
+                  "expr": "sum(rclone_files_renamed_total{customer=\"$Customer\"})",
+                  "fullMetaSearch": false,
+                  "hide": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "Files Renamed",
+                  "range": true,
+                  "refId": "E",
+                  "useBackend": false
+                },
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "builder",
+                  "expr": "sum(rclone_errors_total{customer=\"$Customer\"})",
+                  "fullMetaSearch": false,
+                  "hide": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "Total Errors",
+                  "range": true,
+                  "refId": "F",
+                  "useBackend": false
+                }
+              ],
+              "title": "Status",
+              "type": "piechart"
+            },
+            {
+              "datasource": {},
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "fixedColor": "blue",
+                    "mode": "continuous-YlBl"
+                  },
+                  "fieldMinMax": false,
+                  "mappings": [],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "decbytes"
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 6,
+                "w": 5,
+                "x": 6,
+                "y": 1
+              },
+              "id": 3,
+              "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "auto",
+                "wideLayout": true
+              },
+              "pluginVersion": "11.4.0",
+              "targets": [
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "exemplar": false,
+                  "expr": "sum(increase(rclone_bytes_transferred_total{customer=~\"$Customer\"}[$__range]))",
+                  "format": "time_series",
+                  "fullMetaSearch": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "Range",
+                  "range": true,
+                  "refId": "A",
+                  "useBackend": false
+                },
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "expr": "sum(increase(rclone_bytes_transferred_total{customer=~\"$Customer\"}[24h] @ end()))",
+                  "fullMetaSearch": false,
+                  "hide": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "24h",
+                  "range": true,
+                  "refId": "B",
+                  "useBackend": false
+                },
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "expr": "sum(increase(rclone_bytes_transferred_total{customer=~\"$Customer\"}[300000h] @ end()))",
+                  "fullMetaSearch": false,
+                  "hide": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "Total",
+                  "range": true,
+                  "refId": "C",
+                  "useBackend": false
+                }
+              ],
+              "title": "Data Tranferred",
+              "type": "stat"
+            },
+            {
+              "datasource": {},
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "fixedColor": "blue",
+                    "mode": "continuous-YlBl"
+                  },
+                  "fieldMinMax": false,
+                  "mappings": [],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "sishort"
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 6,
+                "w": 5,
+                "x": 11,
+                "y": 1
+              },
+              "id": 19,
+              "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "auto",
+                "wideLayout": true
+              },
+              "pluginVersion": "11.4.0",
+              "targets": [
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "exemplar": false,
+                  "expr": "sum(increase(rclone_files_transferred_total{customer=~\"$Customer\"} [$__range]))\n\n",
+                  "format": "time_series",
+                  "fullMetaSearch": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "Range",
+                  "range": true,
+                  "refId": "A",
+                  "useBackend": false
+                },
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "expr": "sum(increase(rclone_files_transferred_total{customer=~\"$Customer\"}[24h] @ end()))\n",
+                  "fullMetaSearch": false,
+                  "hide": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "24h",
+                  "range": true,
+                  "refId": "B",
+                  "useBackend": false
+                },
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "expr": "sum(increase(rclone_files_transferred_total{customer=~\"$Customer\"}[30000h] @ end()))\n",
+                  "fullMetaSearch": false,
+                  "hide": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "Total",
+                  "range": true,
+                  "refId": "C",
+                  "useBackend": false
+                }
+              ],
+              "title": "Number of Files Transferred",
+              "type": "stat"
+            },
+            {
+              "datasource": {},
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "fixedColor": "blue",
+                    "mode": "shades"
+                  },
+                  "mappings": [],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "dateTimeFromNow"
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 6,
+                "w": 4,
+                "x": 16,
+                "y": 1
+              },
+              "id": 8,
+              "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "auto",
+                "wideLayout": true
+              },
+              "pluginVersion": "11.4.0",
+              "targets": [
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "expr": "max(process_start_time_seconds{customer=\"$Customer\"}) * 1000",
+                  "fullMetaSearch": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "__auto",
+                  "range": true,
+                  "refId": "A",
+                  "useBackend": false
+                }
+              ],
+              "title": "Rclone running since",
+              "type": "stat"
+            },
+            {
+              "datasource": {},
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "fixedColor": "blue",
+                    "mode": "continuous-YlBl",
+                    "seriesBy": "last"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 50,
+                    "gradientMode": "opacity",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineStyle": {
+                      "fill": "solid"
+                    },
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "never",
+                    "spanNulls": true,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "mappings": [],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "Bps",
+                  "unitScale": true
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 6,
+                "w": 6,
+                "x": 0,
+                "y": 7
+              },
+              "id": 4,
+              "options": {
+                "legend": {
+                  "calcs": [
+                    "mean",
+                    "max"
+                  ],
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "mode": "single",
+                  "sort": "none"
+                }
+              },
+              "targets": [
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "expr": "sum(rclone_speed{customer=\"$Customer\"})",
+                  "fullMetaSearch": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "Total Traffic rate",
+                  "range": true,
+                  "refId": "A",
+                  "useBackend": false
+                }
+              ],
+              "title": "Traffic Rate",
+              "type": "timeseries"
+            },
+            {
+              "datasource": {},
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "fixedColor": "blue",
+                    "mode": "continuous-YlBl"
+                  },
+                  "mappings": [],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "Bps"
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 6,
+                "w": 4,
+                "x": 6,
+                "y": 7
+              },
+              "id": 1,
+              "options": {
+                "minVizHeight": 200,
+                "minVizWidth": 200,
+                "orientation": "auto",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showThresholdLabels": false,
+                "showThresholdMarkers": true,
+                "sizing": "auto"
+              },
+              "pluginVersion": "11.4.0",
+              "targets": [
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "builder",
+                  "expr": "sum(rclone_speed{customer=\"$Customer\"})",
+                  "fullMetaSearch": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "__auto",
+                  "range": true,
+                  "refId": "A",
+                  "useBackend": false
+                }
+              ],
+              "title": "Transfer Rate",
+              "type": "gauge"
+            },
+            {
+              "datasource": {},
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "fixedColor": "blue",
+                    "mode": "palette-classic-by-name"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "drawStyle": "line",
+                    "fillOpacity": 50,
+                    "gradientMode": "opacity",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineStyle": {
+                      "fill": "solid"
+                    },
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "never",
+                    "spanNulls": true,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "mappings": [],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unitScale": true
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 6,
+                "w": 6,
+                "x": 10,
+                "y": 7
+              },
+              "id": 6,
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "mode": "single",
+                  "sort": "none"
+                }
+              },
+              "targets": [
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "expr": "sum(rclone_checked_files_total{customer=\"$Customer\"})",
+                  "fullMetaSearch": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "Files Checked",
+                  "range": true,
+                  "refId": "A",
+                  "useBackend": false
+                },
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "builder",
+                  "expr": "sum(rclone_files_transferred_total{customer=\"$Customer\"})",
+                  "fullMetaSearch": false,
+                  "hide": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "Files Transferred",
+                  "range": true,
+                  "refId": "B",
+                  "useBackend": false
+                },
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "builder",
+                  "expr": "sum(rclone_files_deleted_total{customer=\"$Customer\"})",
+                  "fullMetaSearch": false,
+                  "hide": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "Files Deleted",
+                  "range": true,
+                  "refId": "C",
+                  "useBackend": false
+                },
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "builder",
+                  "expr": "sum(rclone_dirs_deleted_total{customer=\"$Customer\"})",
+                  "fullMetaSearch": false,
+                  "hide": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "Directories Deleted",
+                  "range": true,
+                  "refId": "D",
+                  "useBackend": false
+                },
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "builder",
+                  "expr": "sum(rclone_files_renamed_total{customer=\"$Customer\"})",
+                  "fullMetaSearch": false,
+                  "hide": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "Files Renamed",
+                  "range": true,
+                  "refId": "E",
+                  "useBackend": false
+                },
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "builder",
+                  "expr": "sum(rclone_errors_total{customer=\"$Customer\"})",
+                  "fullMetaSearch": false,
+                  "hide": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "Total Errors",
+                  "range": true,
+                  "refId": "F",
+                  "useBackend": false
+                }
+              ],
+              "title": "Status",
+              "type": "timeseries"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "P1809F7CD0C75ACF3"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "continuous-YlBl"
+                  },
+                  "fieldMinMax": false,
+                  "mappings": [],
+                  "min": 0,
+                  "thresholds": {
+                    "mode": "percentage",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  }
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 6,
+                "w": 4,
+                "x": 16,
+                "y": 7
+              },
+              "id": 18,
+              "options": {
+                "displayMode": "basic",
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "placement": "bottom",
+                  "showLegend": false
+                },
+                "maxVizHeight": 300,
+                "minVizHeight": 16,
+                "minVizWidth": 8,
+                "namePlacement": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showUnfilled": true,
+                "sizing": "auto",
+                "valueMode": "text"
+              },
+              "pluginVersion": "11.4.0",
+              "targets": [
+                {
+                  "editorMode": "code",
+                  "expr": "count(increase(count by (pod) (up{pod=~\"$SelectedPods\"})[$__range]))\n",
+                  "legendFormat": "Max parallel jobs",
+                  "range": true,
+                  "refId": "A"
+                },
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "P1809F7CD0C75ACF3"
+                  },
+                  "editorMode": "code",
+                  "expr": "count(count by (pod) (up{pod=~\"$SelectedPods\"}))",
+                  "hide": false,
+                  "legendFormat": "Current parallel jobs",
+                  "range": true,
+                  "refId": "B"
+                }
+              ],
+              "title": "Parallel Rclone Jobs",
+              "type": "bargauge"
+            },
+            {
+              "collapsed": false,
+              "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 13
+              },
+              "id": 23,
+              "panels": [],
+              "title": "Rclone Metrics per Pod",
+              "type": "row"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "P1809F7CD0C75ACF3"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "continuous-YlBl"
+                  },
+                  "custom": {
+                    "align": "auto",
+                    "cellOptions": {
+                      "mode": "basic",
+                      "type": "gauge",
+                      "valueDisplayMode": "text"
+                    },
+                    "filterable": true,
+                    "inspect": false
+                  },
+                  "mappings": [],
+                  "min": 0,
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "decbytes"
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 5,
+                "w": 11,
+                "x": 0,
+                "y": 14
+              },
+              "id": 20,
+              "options": {
+                "cellHeight": "sm",
+                "footer": {
+                  "countRows": false,
+                  "fields": "",
+                  "reducer": [
+                    "sum"
+                  ],
+                  "show": false
+                },
+                "showHeader": false
+              },
+              "pluginVersion": "11.4.0",
+              "targets": [
+                {
+                  "editorMode": "code",
+                  "exemplar": false,
+                  "expr": "rclone_bytes_transferred_total{pod=~\"$SelectedPods\"}",
+                  "format": "time_series",
+                  "instant": true,
+                  "legendFormat": "{{pod}}",
+                  "range": false,
+                  "refId": "A"
+                }
+              ],
+              "title": "Transferred data per Job",
+              "transformations": [
+                {
+                  "id": "seriesToRows",
+                  "options": {}
+                },
+                {
+                  "id": "filterFieldsByName",
+                  "options": {
+                    "include": {
+                      "names": [
+                        "Metric",
+                        "Value"
+                      ]
+                    }
+                  }
+                }
+              ],
+              "type": "table"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "P1809F7CD0C75ACF3"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "continuous-YlBl"
+                  },
+                  "custom": {
+                    "align": "auto",
+                    "cellOptions": {
+                      "mode": "basic",
+                      "type": "gauge",
+                      "valueDisplayMode": "text"
+                    },
+                    "filterable": true,
+                    "inspect": false
+                  },
+                  "mappings": [],
+                  "min": 0,
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "sishort"
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 5,
+                "w": 11,
+                "x": 11,
+                "y": 14
+              },
+              "id": 24,
+              "options": {
+                "cellHeight": "sm",
+                "footer": {
+                  "countRows": false,
+                  "fields": "",
+                  "reducer": [
+                    "sum"
+                  ],
+                  "show": false
+                },
+                "showHeader": false
+              },
+              "pluginVersion": "11.4.0",
+              "targets": [
+                {
+                  "editorMode": "code",
+                  "exemplar": false,
+                  "expr": "rclone_files_transferred_total{pod=~\"$SelectedPods\"}",
+                  "format": "time_series",
+                  "instant": true,
+                  "legendFormat": "{{pod}}",
+                  "range": false,
+                  "refId": "A"
+                }
+              ],
+              "title": "Number of files Transferred per Job",
+              "transformations": [
+                {
+                  "id": "seriesToRows",
+                  "options": {}
+                },
+                {
+                  "id": "filterFieldsByName",
+                  "options": {
+                    "include": {
+                      "names": [
+                        "Metric",
+                        "Value"
+                      ]
+                    }
+                  }
+                }
+              ],
+              "type": "table"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "P1809F7CD0C75ACF3"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "continuous-YlBl"
+                  },
+                  "custom": {
+                    "align": "auto",
+                    "cellOptions": {
+                      "mode": "basic",
+                      "type": "gauge",
+                      "valueDisplayMode": "text"
+                    },
+                    "filterable": true,
+                    "inspect": false
+                  },
+                  "mappings": [],
+                  "min": 0,
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "Bps"
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 5,
+                "w": 11,
+                "x": 0,
+                "y": 19
+              },
+              "id": 21,
+              "options": {
+                "cellHeight": "sm",
+                "footer": {
+                  "countRows": false,
+                  "fields": "",
+                  "reducer": [
+                    "sum"
+                  ],
+                  "show": false
+                },
+                "showHeader": false
+              },
+              "pluginVersion": "11.4.0",
+              "targets": [
+                {
+                  "editorMode": "code",
+                  "exemplar": false,
+                  "expr": "rclone_speed{pod=~\"$SelectedPods\"}",
+                  "format": "time_series",
+                  "instant": true,
+                  "legendFormat": "{{pod}}",
+                  "range": false,
+                  "refId": "A"
+                }
+              ],
+              "title": "Transfer Rate per Job",
+              "transformations": [
+                {
+                  "id": "seriesToRows",
+                  "options": {}
+                },
+                {
+                  "id": "filterFieldsByName",
+                  "options": {
+                    "include": {
+                      "names": [
+                        "Metric",
+                        "Value"
+                      ]
+                    }
+                  }
+                }
+              ],
+              "type": "table"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "P1809F7CD0C75ACF3"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "continuous-YlRd"
+                  },
+                  "custom": {
+                    "align": "auto",
+                    "cellOptions": {
+                      "mode": "basic",
+                      "type": "gauge",
+                      "valueDisplayMode": "text"
+                    },
+                    "filterable": true,
+                    "inspect": false
+                  },
+                  "mappings": [],
+                  "min": 0,
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "sishort"
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 5,
+                "w": 11,
+                "x": 11,
+                "y": 19
+              },
+              "id": 25,
+              "options": {
+                "cellHeight": "sm",
+                "footer": {
+                  "countRows": false,
+                  "fields": "",
+                  "reducer": [
+                    "sum"
+                  ],
+                  "show": false
+                },
+                "showHeader": false
+              },
+              "pluginVersion": "11.4.0",
+              "targets": [
+                {
+                  "editorMode": "code",
+                  "exemplar": false,
+                  "expr": "rclone_errors_total{pod=~\"$SelectedPods\"}",
+                  "format": "time_series",
+                  "instant": true,
+                  "legendFormat": "{{pod}}",
+                  "range": false,
+                  "refId": "A"
+                }
+              ],
+              "title": "Number of Errors per Job",
+              "transformations": [
+                {
+                  "id": "seriesToRows",
+                  "options": {}
+                },
+                {
+                  "id": "filterFieldsByName",
+                  "options": {
+                    "include": {
+                      "names": [
+                        "Metric",
+                        "Value"
+                      ]
+                    }
+                  }
+                }
+              ],
+              "type": "table"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "P1809F7CD0C75ACF3"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "fixedColor": "blue",
+                    "mode": "continuous-YlBl"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "cores",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "drawStyle": "line",
+                    "fillOpacity": 50,
+                    "gradientMode": "opacity",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineWidth": 2,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "never",
+                    "spanNulls": true,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "mappings": [],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "none",
+                  "unitScale": true
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 7,
+                "w": 7,
+                "x": 0,
+                "y": 24
+              },
+              "id": 9,
+              "options": {
+                "legend": {
+                  "calcs": [
+                    "mean",
+                    "lastNotNull"
+                  ],
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "mode": "multi",
+                  "sort": "desc"
+                }
+              },
+              "pluginVersion": "11.4.0",
+              "targets": [
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{image!=\"\", name=~\"^k8s_.*\", pod=~\"$SelectedPods\"}[5m]))",
+                  "fullMetaSearch": false,
+                  "includeNullMetadata": true,
+                  "interval": "10s",
+                  "intervalFactor": 1,
+                  "legendFormat": "{{ pod }}",
+                  "metric": "container_cpu",
+                  "range": true,
+                  "refId": "A",
+                  "step": 10,
+                  "useBackend": false
+                }
+              ],
+              "title": "Pod CPU usage",
+              "type": "timeseries"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "P1809F7CD0C75ACF3"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "fixedColor": "blue",
+                    "mode": "continuous-YlBl"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "drawStyle": "line",
+                    "fillOpacity": 50,
+                    "gradientMode": "opacity",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineWidth": 2,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "never",
+                    "spanNulls": true,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "mappings": [],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "decbytes",
+                  "unitScale": true
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 7,
+                "w": 7,
+                "x": 7,
+                "y": 24
+              },
+              "id": 11,
+              "options": {
+                "legend": {
+                  "calcs": [
+                    "mean",
+                    "lastNotNull"
+                  ],
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "showLegend": true,
+                  "width": 200
+                },
+                "tooltip": {
+                  "mode": "multi",
+                  "sort": "desc"
+                }
+              },
+              "pluginVersion": "11.4.0",
+              "targets": [
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "expr": "sum by(pod) (container_memory_working_set_bytes{image!=\"\",name=~\"^k8s_.*\",pod=~\"$SelectedPods\"})",
+                  "fullMetaSearch": false,
+                  "includeNullMetadata": true,
+                  "interval": "10s",
+                  "intervalFactor": 1,
+                  "legendFormat": "{{ pod }}",
+                  "metric": "container_memory_usage:sort_desc",
+                  "range": true,
+                  "refId": "A",
+                  "step": 10,
+                  "useBackend": false
+                }
+              ],
+              "title": "Pod Memory usage",
+              "type": "timeseries"
+            },
+            {
+              "datasource": {},
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "custom": {
+                    "align": "auto",
+                    "cellOptions": {
+                      "type": "auto"
+                    },
+                    "filterable": false,
+                    "inspect": false
+                  },
+                  "mappings": [],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  }
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 7,
+                "w": 6,
+                "x": 14,
+                "y": 24
+              },
+              "id": 7,
+              "options": {
+                "cellHeight": "sm",
+                "footer": {
+                  "countRows": false,
+                  "enablePagination": false,
+                  "fields": "",
+                  "reducer": [
+                    "sum"
+                  ],
+                  "show": false
+                },
+                "showHeader": true
+              },
+              "pluginVersion": "11.4.0",
+              "targets": [
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "exemplar": false,
+                  "expr": "rclone_speed",
+                  "format": "table",
+                  "fullMetaSearch": false,
+                  "includeNullMetadata": true,
+                  "instant": false,
+                  "legendFormat": "__auto",
+                  "range": true,
+                  "refId": "A",
+                  "useBackend": false
+                }
+              ],
+              "title": "Historical Instances",
+              "transformations": [
+                {
+                  "id": "filterFieldsByName",
+                  "options": {
+                    "byVariable": false,
+                    "include": {
+                      "names": [
+                        "Time",
+                        "pod"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "groupBy",
+                  "options": {
+                    "fields": {
+                      "pod": {
+                        "aggregations": [],
+                        "operation": "groupby"
+                      }
+                    }
+                  }
+                }
+              ],
+              "type": "table"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "P1809F7CD0C75ACF3"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "fixedColor": "blue",
+                    "mode": "continuous-YlBl"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "drawStyle": "line",
+                    "fillOpacity": 20,
+                    "gradientMode": "opacity",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineWidth": 2,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "never",
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "mappings": [],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "Bps",
+                  "unitScale": true
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 7,
+                "w": 7,
+                "x": 0,
+                "y": 31
+              },
+              "id": 12,
+              "options": {
+                "legend": {
+                  "calcs": [
+                    "mean",
+                    "lastNotNull"
+                  ],
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "mode": "multi",
+                  "sort": "desc"
+                }
+              },
+              "pluginVersion": "11.4.0",
+              "targets": [
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "expr": "sum by(pod) (rate(sum(container_network_receive_bytes_total{image!=\"\", name=~\"^k8s_.*\", pod=~\"$SelectedPods\"})[1m]))",
+                  "fullMetaSearch": false,
+                  "includeNullMetadata": true,
+                  "interval": "10s",
+                  "intervalFactor": 1,
+                  "legendFormat": "-> Total Bandwidth-In",
+                  "metric": "network",
+                  "range": true,
+                  "refId": "A",
+                  "step": 10,
+                  "useBackend": false
+                },
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "expr": "- sum by(pod) (rate(sum(container_network_receive_bytes_total{image!=\"\", name=~\"^k8s_.*\", pod=~\"$SelectedPods\"})[1m]))",
+                  "fullMetaSearch": false,
+                  "includeNullMetadata": true,
+                  "interval": "10s",
+                  "intervalFactor": 1,
+                  "legendFormat": "<- Total Bandwidth-Out",
+                  "metric": "network",
+                  "range": true,
+                  "refId": "B",
+                  "step": 10,
+                  "useBackend": false
+                }
+              ],
+              "title": "Pod Network Bandwidth",
+              "type": "timeseries"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "P1809F7CD0C75ACF3"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "fixedColor": "blue",
+                    "mode": "continuous-YlBl"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "drawStyle": "line",
+                    "fillOpacity": 20,
+                    "gradientMode": "opacity",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineWidth": 2,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "never",
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "mappings": [],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "pps",
+                  "unitScale": true
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 7,
+                "w": 7,
+                "x": 7,
+                "y": 31
+              },
+              "id": 14,
+              "options": {
+                "legend": {
+                  "calcs": [
+                    "mean",
+                    "lastNotNull"
+                  ],
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "mode": "multi",
+                  "sort": "desc"
+                }
+              },
+              "pluginVersion": "11.4.0",
+              "targets": [
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "expr": "sum by(pod) (rate(sum(container_network_receive_packets_total{image!=\"\",name=~\"^k8s_.*\",pod=~\"$SelectedPods\"}) [1m]))",
+                  "fullMetaSearch": false,
+                  "includeNullMetadata": true,
+                  "interval": "10s",
+                  "intervalFactor": 1,
+                  "legendFormat": "-> Total Network Packets - In",
+                  "metric": "network",
+                  "range": true,
+                  "refId": "A",
+                  "step": 10,
+                  "useBackend": false
+                },
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "expr": "- sum by(pod) (rate(sum(container_network_receive_packets_total{image!=\"\",name=~\"^k8s_.*\",pod=~\"$SelectedPods\"}) [1m]))",
+                  "fullMetaSearch": false,
+                  "includeNullMetadata": true,
+                  "interval": "10s",
+                  "intervalFactor": 1,
+                  "legendFormat": "<- Total Network Packets - Out",
+                  "metric": "network",
+                  "range": true,
+                  "refId": "B",
+                  "step": 10,
+                  "useBackend": false
+                }
+              ],
+              "title": "Pod Network Packet Rate I/O",
+              "type": "timeseries"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "P1809F7CD0C75ACF3"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "fixedColor": "blue",
+                    "mode": "continuous-YlBl"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "drawStyle": "line",
+                    "fillOpacity": 20,
+                    "gradientMode": "opacity",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineWidth": 2,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "never",
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "mappings": [],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "pps",
+                  "unitScale": true
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 7,
+                "w": 14,
+                "x": 0,
+                "y": 38
+              },
+              "id": 15,
+              "options": {
+                "legend": {
+                  "calcs": [
+                    "mean",
+                    "lastNotNull"
+                  ],
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "mode": "multi",
+                  "sort": "desc"
+                }
+              },
+              "pluginVersion": "11.4.0",
+              "targets": [
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "expr": "sum by(pod) (rate(sum(container_network_receive_packets_dropped_total{image!=\"\", name=~\"^k8s_.*\", pod=~\"$SelectedPods\"})[1m]))",
+                  "fullMetaSearch": false,
+                  "includeNullMetadata": true,
+                  "interval": "10s",
+                  "intervalFactor": 1,
+                  "legendFormat": "-> Total Packets Dropped - In",
+                  "metric": "network",
+                  "range": true,
+                  "refId": "A",
+                  "step": 10,
+                  "useBackend": false
+                },
+                {
+                  "datasource": {
+                    "type": "prometheus",
+                    "uid": "ec9d7f2b-f899-4dc0-a6e8-b6acf4401b13"
+                  },
+                  "disableTextWrap": false,
+                  "editorMode": "code",
+                  "expr": "- sum by(pod) (rate(sum(container_network_receive_packets_dropped_total{image!=\"\", name=~\"^k8s_.*\", pod=~\"$SelectedPods\"})[1m]))",
+                  "fullMetaSearch": false,
+                  "includeNullMetadata": true,
+                  "interval": "10s",
+                  "intervalFactor": 1,
+                  "legendFormat": "<- Total Packets Dropped - Out",
+                  "metric": "network",
+                  "range": true,
+                  "refId": "B",
+                  "step": 10,
+                  "useBackend": false
+                }
+              ],
+              "title": "Pod Packets Dropped",
+              "type": "timeseries"
+            }
+          ],
+          "refresh": "30s",
+          "schemaVersion": 39,
+          "tags": [],
+          "templating": {
+            "list": [
+              {
+                "current": {
+                  "isNone": true,
+                  "selected": false,
+                  "text": "None",
+                  "value": ""
+                },
+                "definition": "label_values(rclone_speed,customer)",
+                "description": "Customer",
+                "label": "Customer",
+                "name": "Customer",
+                "options": [],
+                "query": {
+                  "qryType": 1,
+                  "query": "label_values(rclone_speed,customer)",
+                  "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                },
+                "refresh": 1,
+                "regex": "",
+                "type": "query"
+              },
+              {
+                "allValue": "",
+                "current": {
+                  "text": "All",
+                  "value": "$__all"
+                },
+                "definition": "label_values(rclone_speed{customer=\"$Customer\"},pod)",
+                "description": "SelectedPods",
+                "includeAll": true,
+                "label": "SelectedPods",
+                "name": "SelectedPods",
+                "options": [],
+                "query": {
+                  "qryType": 1,
+                  "query": "label_values(rclone_speed{customer=\"$Customer\"},pod)",
+                  "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                },
+                "refresh": 2,
+                "regex": "",
+                "type": "query"
+              }
+            ]
+          },
+          "time": {
+            "from": "now-30m",
+            "to": "now"
+          },
+          "timepicker": {},
+          "timezone": "",
+          "title": "Rclone Akamai Dashboard",
+          "uid": "ad55c9c6-875a-4b22-8ee5-b4a1f830d54d",
+          "version": 10,
+          "weekStart": ""
+        }

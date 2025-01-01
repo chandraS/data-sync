@@ -1,0 +1,16 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: podscrape-rclone
+spec:
+  namespaceSelector:
+    any: true
+  podMetricsEndpoints:
+    - port: rclone-metrics
+      interval: 1s
+      path: /metrics
+  selector:
+    matchLabels:
+      rclone: "true"
+  podTargetLabels:
+    - customer
