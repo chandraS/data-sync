@@ -1,0 +1,578 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: rclone-migration-cloud-storage-large-number-objects
+  namespace: argo-workflow
+spec:
+  entrypoint: rclone-migration
+  serviceAccountName: argo-workflow
+  workflowMetadata:
+    labels:
+      customer: "{{workflow.parameters.customer-name}}"
+  arguments:
+    parameters:
+    - name: customer-name
+    - name: rclone-conf
+    - name: input-config-json
+  
+  templates:
+  ######-----Main Template-----######
+  - name: rclone-migration
+    steps:
+    # Step 1: Migration job iterating over the config json file
+    - - name: migration-job
+        template: assestment-job-template
+        arguments:
+          parameters:
+          - name: rclone-conf
+            value: "{{workflow.parameters.rclone-conf}}"
+          - name: object-list-name
+            value: "{{item.object_list_name}}"
+          - name: rclone-source-name
+            value: "{{item.rclone_source_name}}"
+          - name: rclone-source-bucket
+            value: "{{item.rclone_source_bucket}}"
+          - name: rclone-destination-name
+            value: "{{item.rclone_destination_name}}"
+          - name: rclone-destination-bucket
+            value: "{{item.rclone_destination_bucket}}"
+          - name: parallel-sync-jobs
+            value: "{{item.parallel_sync_jobs}}"
+        withParam: "{{workflow.parameters.input-config-json}}"
+
+    #Step 2: Total summary status
+    - - name: total-summary
+        template: total-summary-template
+
+
+######-----Double Nested Steps File Split Template-----######
+# Template for nested steps split object-list-file
+  - name: assestment-job-template
+    inputs:
+      parameters:
+        - name: rclone-conf
+        - name: object-list-name
+        - name: rclone-source-name
+        - name: rclone-source-bucket
+        - name: rclone-destination-name
+        - name: rclone-destination-bucket
+        - name: parallel-sync-jobs
+    steps:
+
+    # Step 1: List all objects in the source
+    - - name: list-objects
+        template: list-objects-template
+        arguments:
+          parameters:
+          - name: rclone-conf
+            value: "{{inputs.parameters.rclone-conf}}"
+          - name: object-list-name
+            value: "{{inputs.parameters.object-list-name}}"
+          - name: rclone-source-name
+            value: "{{inputs.parameters.rclone-source-name}}"
+          - name: rclone-source-bucket
+            value: "{{inputs.parameters.rclone-source-bucket}}"
+
+    #Step 2: Splip object list file content
+    - - name: split-file-job
+        template: split-file-template
+        when: "{{inputs.parameters.parallel-sync-jobs}} != 0 && {{inputs.parameters.parallel-sync-jobs}} < 10"
+        arguments:
+          parameters:
+          - name: object-list-name
+            value: "{{inputs.parameters.object-list-name}}"
+          - name: parallel-sync-jobs
+            value: "{{inputs.parameters.parallel-sync-jobs}}"
+          artifacts:
+          - name: object-list-file
+            from: "{{steps.list-objects.outputs.artifacts.objects-list}}"
+
+    #Step 3: Core sync job for N parallel jobs
+    - - name: parallel-sync-job
+        template: sync-template
+        when: "{{inputs.parameters.parallel-sync-jobs}} != 0 && {{inputs.parameters.parallel-sync-jobs}} < 10"
+        arguments:
+          parameters:
+          - name: rclone-conf
+            value: "{{inputs.parameters.rclone-conf}}"
+          - name: object-list-name
+            value: "{{inputs.parameters.object-list-name}}0{{item}}"
+          - name: rclone-source-name
+            value: "{{inputs.parameters.rclone-source-name}}"
+          - name: rclone-source-bucket
+            value: "{{inputs.parameters.rclone-source-bucket}}"
+          - name: rclone-destination-name
+            value: "{{inputs.parameters.rclone-destination-name}}"
+          - name: rclone-destination-bucket
+            value: "{{inputs.parameters.rclone-destination-bucket}}"
+          - name: parallel-sync-jobs
+            value: "{{inputs.parameters.parallel-sync-jobs}}"
+          artifacts:
+          - name: object-list-file
+            from: "{{steps.split-file-job.outputs.artifacts.split_files}}"
+        withSequence:
+          count: "{{inputs.parameters.parallel-sync-jobs}}"
+          start: "1"
+
+
+######-----Nested Steps Template-----######
+# Template for nested steps core-migration + individual summary  
+  - name: sync-template
+    inputs:
+      parameters:
+        - name: rclone-conf
+        - name: object-list-name
+        - name: rclone-source-name
+        - name: rclone-source-bucket
+        - name: rclone-destination-name
+        - name: rclone-destination-bucket
+        - name: parallel-sync-jobs
+      artifacts:
+        - name: object-list-file
+    steps:
+    - - name: core-http-migration
+        template: core-http-migration-template
+        arguments:
+          parameters:
+          - name: rclone-conf
+            value: "{{inputs.parameters.rclone-conf}}"
+          - name: object-list-name
+            value: "{{inputs.parameters.object-list-name}}"
+          - name: rclone-source-name
+            value: "{{inputs.parameters.rclone-source-name}}"
+          - name: rclone-source-bucket
+            value: "{{inputs.parameters.rclone-source-bucket}}"
+          - name: rclone-destination-name
+            value: "{{inputs.parameters.rclone-destination-name}}"
+          - name: rclone-destination-bucket
+            value: "{{inputs.parameters.rclone-destination-bucket}}"
+          - name: parallel-sync-jobs
+            value: "{{inputs.parameters.parallel-sync-jobs}}"
+          artifacts:
+          - name: object-list-file
+            from: "{{inputs.artifacts.object-list-file}}"
+    - - name: summary
+        template: summary-template
+        arguments:
+          parameters:
+          - name: object-list-name
+            value: "{{inputs.parameters.object-list-name}}"
+          artifacts:
+          - name: logs
+            from: "{{steps.core-http-migration.outputs.artifacts.logs}}"
+
+
+######-----Individual Templates-----######
+# Template for iterating over the config json file
+  - name: core-http-migration-template
+    volumes:
+    - name: shared-data
+      emptyDir: {}
+    - name: fluent-bit-config
+      configMap:
+        name: fluent-bit-config
+    inputs:
+      parameters:
+        - name: rclone-conf
+        - name: object-list-name
+        - name: rclone-source-name
+        - name: rclone-source-bucket
+        - name: rclone-destination-name
+        - name: rclone-destination-bucket
+        - name: parallel-sync-jobs
+      artifacts:
+        - name: object-list-file
+          path: /data/objects-list
+    container:
+      image: rclone/rclone
+      command: [sh, -c]
+      args:
+      - |
+        mkdir -p /data/rclone-config/ ;
+        mkdir -p /data/logs/ ;
+        echo "{{inputs.parameters.rclone-conf}}" > /data/rclone-config/rclone.conf ;
+        RCLONE_CONFIG=/data/rclone-config/rclone.conf ;
+        export RCLONE_CONFIG ;
+        rclone copy {{inputs.parameters.rclone-source-name}}:{{inputs.parameters.rclone-source-bucket}} {{inputs.parameters.rclone-destination-name}}:{{inputs.parameters.rclone-destination-bucket}} --include-from=/data/objects-list/{{inputs.parameters.object-list-name}} --transfers 50 --checkers 50 --rc --rc-addr=0.0.0.0:5572 --rc-enable-metrics --stats 1s --rc-no-auth -P --log-level ERROR --stats-log-level NOTICE --log-file /data/logs/{{inputs.parameters.object-list-name}}.log | tee /data/logs/stats-{{inputs.parameters.object-list-name}}.log
+
+      volumeMounts:
+      - name: shared-data
+        mountPath: /data
+      resources:
+        requests:
+          cpu: 1
+          memory: 1G
+        limits:
+          memory: 16G
+          cpu: 8
+      ports:
+      - containerPort: 5572
+        name: rclone-metrics
+    #Fluentfit sidecar for log parsing
+    sidecars:
+    - name: fluentbit
+      image: fluent/fluent-bit:3.2
+      env:
+        - name: CUSTOMER_NAME
+          value: "{{workflow.parameters.customer-name}}"
+      volumeMounts:
+      - name: shared-data
+        mountPath: /data
+      - name: fluent-bit-config
+        mountPath: /fluent-bit/etc/
+    metadata:
+      labels:
+        rclone: "true"
+        customer: "{{workflow.parameters.customer-name}}"
+    nodeSelector:
+      rclone: "true"
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+            - key: rclone
+              operator: In
+              values:
+              - "true"
+          topologyKey: kubernetes.io/hostname
+    outputs:
+      artifacts:
+      - name: logs
+        path: /data/logs/
+        archive:
+          none: {}
+
+# Template for split file content
+  - name: split-file-template
+    inputs:
+      parameters:
+        - name: object-list-name
+        - name: parallel-sync-jobs
+      artifacts:
+        - name: object-list-file
+          path: /data/split_files/{{inputs.parameters.object-list-name}}
+        - name: split_script
+          path: /data/script/split_script.sh
+          raw:
+            data: |
+              #!/bin/bash
+
+              # Check if correct number of arguments are provided
+              if [ $# -ne 3 ]; then
+                  echo "Usage: $0 <input_file> <num_output_files> <output_prefix>"
+                  exit 1
+              fi
+
+              # Input parameters
+              INPUT_FILE=$1
+              NUM_FILES=$2
+              OUTPUT_PREFIX=$3
+
+              # Count total lines in the file
+              TOTAL_LINES=$(wc -l < "$INPUT_FILE")
+              echo "======================NUMBER OF LINES=======================\n"
+              echo "Number of lines in $INPUT_FILE -> $TOTAL_LINES lines\n"
+              echo "============================================================\n"
+
+              # Create a temporary shuffled file
+              TEMP_FILE=$(mktemp)
+              shuf "$INPUT_FILE" > "$TEMP_FILE"
+
+              # Calculate lines per file (rounding up)
+              LINES_PER_FILE=$(( (TOTAL_LINES + NUM_FILES - 1) / NUM_FILES ))
+
+              # Split the shuffled file
+              split --numeric-suffixes=1 -l "$LINES_PER_FILE" "$TEMP_FILE" "$OUTPUT_PREFIX"
+
+              echo "========================OUTPUT FILES========================\n"
+              echo "Split $INPUT_FILE into $NUM_FILES files:\n"
+
+              for file in "${OUTPUT_PREFIX}"*; do
+                  wc -l "$file"
+              done
+
+              # Clean up temporary file
+              rm "$TEMP_FILE"
+
+              echo "============================================================"
+
+    volumes:
+    - name: shared-data
+      emptyDir: {}        
+    container:
+      image: ubuntu:latest
+      workingDir: "/data/result/"
+      command: [sh, -c]
+      args:
+      - |
+        chmod +x /data/script/split_script.sh;
+        sh /data/script/split_script.sh /data/split_files/{{inputs.parameters.object-list-name}} {{inputs.parameters.parallel-sync-jobs}} {{inputs.parameters.object-list-name}} ;
+      volumeMounts:
+      - name: shared-data
+        mountPath: /data
+      resources:
+        requests:
+          cpu: 1
+          memory: 1G
+        limits:
+          memory: 16G
+          cpu: 8
+    nodeSelector:
+      rclone: "true"
+    outputs:
+      artifacts:
+      - name: split_files
+        path: /data/result
+        archive:
+          none: {}
+
+# Template for listing all objects in source
+  - name: list-objects-template
+    inputs:
+      parameters:
+        - name: rclone-conf
+        - name: object-list-name
+        - name: rclone-source-name
+        - name: rclone-source-bucket
+    volumes:
+    - name: shared-data
+      emptyDir: {}        
+    container:
+      image: rclone/rclone
+      workingDir: "/data/objects-list/"
+      command: [sh, -c]
+      args:
+      - |
+        mkdir -p /data/rclone-config/ ;
+        mkdir -p /data/logs/ ;
+        echo "{{inputs.parameters.rclone-conf}}" > /data/rclone-config/rclone.conf ;
+        RCLONE_CONFIG=/data/rclone-config/rclone.conf ;
+        export RCLONE_CONFIG ;
+
+        rclone lsf -R {{inputs.parameters.rclone-source-name}}:{{inputs.parameters.rclone-source-bucket}} --dirs-only --log-level ERROR --log-file /data/logs/{{inputs.parameters.object-list-name}}.log | tee {{inputs.parameters.object-list-name}};
+        sed -i 's/$/\*/' {{inputs.parameters.object-list-name}};
+        echo "/*" >> {{inputs.parameters.object-list-name}}
+      volumeMounts:
+      - name: shared-data
+        mountPath: /data
+      resources:
+        requests:
+          cpu: 1
+          memory: 1G
+        limits:
+          memory: 16G
+          cpu: 8
+    nodeSelector:
+      rclone: "true"
+    outputs:
+      artifacts:
+      - name: objects-list
+        path: /data/objects-list/{{inputs.parameters.object-list-name}}
+        archive:
+          none: {}
+      - name: logs
+        path: /data/logs/{{inputs.parameters.object-list-name}}.log
+        archive:
+          none: {}
+
+# Template for summary status after core migration
+  - name: summary-template
+    inputs:
+      parameters:
+        - name: object-list-name
+      artifacts:
+        - name: logs
+          path: /data/logs
+    volumes:
+    - name: shared-data
+      emptyDir: {}        
+    container:
+      image: alpine
+      command: [sh, -c]
+      args:
+      - |
+        mkdir -p /data/summary/;
+        grep "Transferred:" /data/logs/stats-{{inputs.parameters.object-list-name}}.log | tail -1 > /data/summary/{{inputs.parameters.object-list-name}}.summary.txt ;
+        grep "Checks:" /data/logs/stats-{{inputs.parameters.object-list-name}}.log | tail -1 >> /data/summary/{{inputs.parameters.object-list-name}}.summary.txt ;
+        grep "Deletes:" /data/logs/stats-{{inputs.parameters.object-list-name}}.log | tail -1 >> /data/summary/{{inputs.parameters.object-list-name}}.summary.txt ;
+        grep "Errors:" /data/logs/stats-{{inputs.parameters.object-list-name}}.log | tail -1 >> /data/summary/{{inputs.parameters.object-list-name}}.summary.txt ;
+
+        echo "--Process summary--";
+        cat /data/summary/{{inputs.parameters.object-list-name}}.summary.txt;
+        
+      volumeMounts:
+      - name: shared-data
+        mountPath: /data
+    nodeSelector:
+      rclone: "true"
+    outputs:
+      artifacts:
+      - name: summary
+        path: /data/summary/{{inputs.parameters.object-list-name}}.summary.txt
+        archive:
+          none: {}
+        s3:
+          key: "{{workflow.name}}/results/{{inputs.parameters.object-list-name}}.summary.txt"
+
+# Template for Total summary status after core migration
+  - name: total-summary-template
+    inputs:
+      artifacts:
+        - name: summary
+          path: /data/summary
+          s3:
+            key: "{{workflow.name}}/results"
+    volumes:
+    - name: shared-data
+      emptyDir: {}        
+    script:
+      image: python:3.12.8-slim
+      command: [python]
+      source: |
+        import os
+        import re
+        from pathlib import Path
+
+        def parse_file_status(file_path):
+            """
+            Parse a single status file and extract numeric values.
+            
+            Args:
+                file_path (str): Path to the status file
+            
+            Returns:
+                dict: Parsed status values
+            """
+            status = {
+                'Transferred': {'processed': 0, 'total': 0},
+                'Checks': {'processed': 0, 'total': 0},
+                'Errors': {'processed': 0, 'total': 0},
+                'Deletes': {'processed': 0, 'total': 0}
+            }
+            
+            try:
+                with open(file_path, 'r') as f:
+                    content = f.read()
+                
+                # Parse Transferred line - handle both formats
+                transferred_match = (
+                    re.search(r'Transferred:\s*(\d+)\s*B\s*/\s*(\d+)\s*B', content) or  # Bytes format
+                    re.search(r'Transferred:\s*(\d+)\s*/\s*(\d+)', content)  # Numeric format
+                )
+                if transferred_match:
+                    status['Transferred']['processed'] = int(transferred_match.group(1))
+                    status['Transferred']['total'] = int(transferred_match.group(2))
+                
+                # Parse Checks and Deletes with existing format
+                for key in ['Checks', 'Deletes']:
+                    match = re.search(rf'{key}:\s*(\d+)\s*/\s*(\d+)', content)
+                    if match:
+                        status[key]['processed'] = int(match.group(1))
+                        status[key]['total'] = int(match.group(2))
+                
+                # Parse Errors - handle multiple formats
+                errors_match = (
+                    re.search(r'Errors:\s*(\d+)\s*/\s*(\d+)', content) or  # Original format
+                    re.search(r'Errors:\s*(\d+)\s*\(', content) or  # Format with note
+                    re.search(r'Errors:\s*(\d+)', content)  # Simple number format
+                )
+                if errors_match:
+                    status['Errors']['processed'] = int(errors_match.group(1))
+                    status['Errors']['total'] = int(errors_match.group(1))  # When only one number is present
+            
+            except Exception as e:
+                print(f"Error parsing {file_path}: {e}")
+            
+            return status
+
+        def aggregate_file_statuses(directory):
+            """
+            Aggregate status from all files in the given directory.
+            
+            Args:
+                directory (str): Path to the directory containing status files
+            
+            Returns:
+                dict: Aggregated status across all files
+            """
+            total_status = {
+                'Transferred': {'processed': 0, 'total': 0},
+                'Checks': {'processed': 0, 'total': 0},
+                'Errors': {'processed': 0, 'total': 0},
+                'Deletes': {'processed': 0, 'total': 0}
+            }
+            
+            # Ensure the directory exists
+            dir_path = Path(directory)
+            if not dir_path.is_dir():
+                raise ValueError(f"Directory not found: {directory}")
+            
+            # Find all text files in the directory
+            status_files = list(dir_path.glob('*.summary.txt'))
+            
+            if not status_files:
+                print(f"No status files found in {directory}")
+                return total_status
+            
+            # Process each file
+            for file_path in status_files:
+                file_status = parse_file_status(file_path)
+                
+                # Aggregate values
+                for key in total_status:
+                    total_status[key]['processed'] += file_status[key]['processed']
+                    total_status[key]['total'] += file_status[key]['total']
+            
+            return total_status
+
+        def write_summary(directory, summary_file='status_summary.txt'):
+            """
+            Write aggregated status to a summary file.
+            
+            Args:
+                directory (str): Path to the directory containing status files
+                summary_file (str): Name of the output summary file
+            """
+            # Aggregate statuses
+            total_status = aggregate_file_statuses(directory)
+            
+            # Write summary
+            summary_path = Path(directory) / summary_file
+            with open(summary_path, 'w') as f:
+                f.write("File Status Summary\n")
+                f.write("=" * 20 + "\n\n")
+                
+                # Calculate percentage safely
+                def safe_percentage(processed, total):
+                    return f"{(processed / total * 100):.2f}%" if total > 0 else "0.00%"
+                
+                f.write(f"Transferred:\t{total_status['Transferred']['processed']} / {total_status['Transferred']['total']}, {safe_percentage(total_status['Transferred']['processed'], total_status['Transferred']['total'])}\n")
+                f.write(f"Checks:\t\t{total_status['Checks']['processed']} / {total_status['Checks']['total']}, {safe_percentage(total_status['Checks']['processed'], total_status['Checks']['total'])}\n")
+                
+                # Errors shown as simple count
+                f.write(f"Errors:\t\t{total_status['Errors']['processed']}\n")
+                
+                f.write(f"Deletes:\t{total_status['Deletes']['processed']} / {total_status['Deletes']['total']}, {safe_percentage(total_status['Deletes']['processed'], total_status['Deletes']['total'])}\n")
+            
+            print(f"Summary written to {summary_path}")
+
+        def main():
+            # Example usage
+            directory = '/data/summary'  # Replace with your directory path
+            write_summary(directory)
+
+        if __name__ == '__main__':
+            main()
+
+      volumeMounts:
+      - name: shared-data
+        mountPath: /data
+    nodeSelector:
+      rclone: "true"
+    outputs:
+      artifacts:
+      - name: summary
+        path: /data/summary/status_summary.txt
+        archive:
+          none: {}
